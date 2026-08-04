@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 from app.schemas.generation import GenerationCreateRequest, GenerationProgressResponse, GenerationDetailResponse
 from app.core.security import get_current_user
 from app.core.database import db_store, get_supabase_client
-from app.graph.workflow import compiled_app_graph
+from app.graph.workflow import get_app_graph
 
 router = APIRouter(prefix="", tags=["Generation"])
 
@@ -17,8 +17,9 @@ async def execute_generation_pipeline(state: Dict[str, Any]):
     try:
         db_store.generations[gen_id]["status"] = "running"
         
-        # Invoke LangGraph Workflow
-        final_state = await compiled_app_graph.ainvoke(state)
+        # Invoke LangGraph Workflow (graph is compiled lazily on first call)
+        graph = get_app_graph()
+        final_state = await graph.ainvoke(state)
         
         db_store.generations[gen_id]["status"] = final_state.get("status", "completed")
         db_store.generations[gen_id]["current_agent"] = "Finished"

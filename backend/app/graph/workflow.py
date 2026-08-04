@@ -17,13 +17,24 @@ from app.core.database import db_store, get_supabase_client
 
 logger = logging.getLogger(__name__)
 
-# Initialize agent instances
-creative_agent = CreativeDirectorAgent()
-planner_agent = PlannerAgent()
-research_agent = ResearchAnalystAgent()
-content_agent = ContentCreatorAgent()
-quality_agent = QualityDirectorAgent()
-growth_agent = GrowthStrategistAgent()
+# Lazy-initialized agent instances (avoids crash at startup if API key is not set)
+_creative_agent = None
+_planner_agent = None
+_research_agent = None
+_content_agent = None
+_quality_agent = None
+_growth_agent = None
+
+def _get_agents():
+    global _creative_agent, _planner_agent, _research_agent, _content_agent, _quality_agent, _growth_agent
+    if _creative_agent is None:
+        _creative_agent = CreativeDirectorAgent()
+        _planner_agent = PlannerAgent()
+        _research_agent = ResearchAnalystAgent()
+        _content_agent = ContentCreatorAgent()
+        _quality_agent = QualityDirectorAgent()
+        _growth_agent = GrowthStrategistAgent()
+    return _creative_agent, _planner_agent, _research_agent, _content_agent, _quality_agent, _growth_agent
 
 def record_agent_run(generation_id: str, agent_name: str, status: str, input_json: Dict, output_json: Dict, execution_time_ms: int):
     run_entry = {
@@ -59,6 +70,7 @@ def record_agent_run(generation_id: str, agent_name: str, status: str, input_jso
 async def node_creative_director(state: AgentState) -> Dict[str, Any]:
     t0 = time.time()
     state["current_agent"] = "Creative Director"
+    creative_agent, _, _, _, _, _ = _get_agents()
     output = await creative_agent.run(
         {"idea_prompt": state["idea_prompt"], "platform": state["platform"], "audience": state["audience"], "tone": state["tone"]},
         CreativeDirectorOutput
@@ -79,6 +91,7 @@ async def node_creative_director(state: AgentState) -> Dict[str, Any]:
 async def node_planner(state: AgentState) -> Dict[str, Any]:
     t0 = time.time()
     state["current_agent"] = "Planner"
+    _, planner_agent, _, _, _, _ = _get_agents()
     output = await planner_agent.run(
         {"platform": state["platform"], "creative_direction": state.get("creative_direction", {})},
         PlannerOutput
@@ -99,6 +112,7 @@ async def node_planner(state: AgentState) -> Dict[str, Any]:
 async def node_research_analyst(state: AgentState) -> Dict[str, Any]:
     t0 = time.time()
     state["current_agent"] = "Research Analyst"
+    _, _, research_agent, _, _, _ = _get_agents()
     output = await research_agent.run(
         {"idea_prompt": state["idea_prompt"], "platform": state["platform"]},
         ResearchAnalystOutput
@@ -119,6 +133,7 @@ async def node_research_analyst(state: AgentState) -> Dict[str, Any]:
 async def node_content_creator(state: AgentState) -> Dict[str, Any]:
     t0 = time.time()
     state["current_agent"] = "Content Creator"
+    _, _, _, content_agent, _, _ = _get_agents()
     output = await content_agent.run(
         {
             "idea_prompt": state["idea_prompt"],
@@ -147,6 +162,7 @@ async def node_content_creator(state: AgentState) -> Dict[str, Any]:
 async def node_quality_director(state: AgentState) -> Dict[str, Any]:
     t0 = time.time()
     state["current_agent"] = "Quality Director"
+    _, _, _, _, quality_agent, _ = _get_agents()
     retry_cnt = state.get("retry_count", 0)
     output = await quality_agent.run(
         {
@@ -191,6 +207,7 @@ def route_quality_check(state: AgentState) -> str:
 async def node_growth_strategist(state: AgentState) -> Dict[str, Any]:
     t0 = time.time()
     state["current_agent"] = "Growth Strategist"
+    _, _, _, _, _, growth_agent = _get_agents()
     output = await growth_agent.run(
         {"idea_prompt": state["idea_prompt"], "platform": state["platform"], "content_draft": state.get("content_draft")},
         GrowthStrategistOutput
@@ -250,37 +267,45 @@ async def node_growth_strategist(state: AgentState) -> Dict[str, Any]:
         "completed_agents": completed
     }
 
-# Build LangGraph Workflow
-workflow_graph = StateGraph(AgentState)
+# Lazy-compiled graph singleton — avoids any crash at module import time
+_compiled_graph = None
 
-# Add Nodes
-workflow_graph.add_node("creative_director", node_creative_director)
-workflow_graph.add_node("planner", node_planner)
-workflow_graph.add_node("research_analyst", node_research_analyst)
-workflow_graph.add_node("content_creator", node_content_creator)
-workflow_graph.add_node("quality_director", node_quality_director)
-workflow_graph.add_node("growth_strategist", node_growth_strategist)
+def get_app_graph():
+    """Returns the compiled LangGraph workflow, building it on first call."""
+    global _compiled_graph
+    if _compiled_graph is not None:
+        return _compiled_graph
 
-# Set Entry Point
-workflow_graph.set_entry_point("creative_director")
+    workflow_graph = StateGraph(AgentState)
 
-# Add Edges
-workflow_graph.add_edge("creative_director", "planner")
-workflow_graph.add_edge("planner", "research_analyst")
-workflow_graph.add_edge("research_analyst", "content_creator")
-workflow_graph.add_edge("content_creator", "quality_director")
+    workflow_graph.add_node("creative_director", node_creative_director)
+    workflow_graph.add_node("planner", node_planner)
+    workflow_graph.add_node("research_analyst", node_research_analyst)
+    workflow_graph.add_node("content_creator", node_content_creator)
+    workflow_graph.add_node("quality_director", node_quality_director)
+    workflow_graph.add_node("growth_strategist", node_growth_strategist)
 
-# Add Quality Loop Conditional Edge
-workflow_graph.add_conditional_edges(
-    "quality_director",
-    route_quality_check,
-    {
-        "content_creator": "content_creator",
-        "growth_strategist": "growth_strategist"
-    }
-)
+    workflow_graph.set_entry_point("creative_director")
 
-workflow_graph.add_edge("growth_strategist", END)
+    workflow_graph.add_edge("creative_director", "planner")
+    workflow_graph.add_edge("planner", "research_analyst")
+    workflow_graph.add_edge("research_analyst", "content_creator")
+    workflow_graph.add_edge("content_creator", "quality_director")
 
-# Compile Graph
-compiled_app_graph = workflow_graph.compile()
+    workflow_graph.add_conditional_edges(
+        "quality_director",
+        route_quality_check,
+        {
+            "content_creator": "content_creator",
+            "growth_strategist": "growth_strategist"
+        }
+    )
+
+    workflow_graph.add_edge("growth_strategist", END)
+
+    _compiled_graph = workflow_graph.compile()
+    logger.info("LangGraph workflow compiled successfully.")
+    return _compiled_graph
+
+# Keep backward-compatible alias used by generation.py
+compiled_app_graph = None  # Will be set lazily via get_app_graph()
