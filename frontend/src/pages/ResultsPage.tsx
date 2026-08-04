@@ -13,7 +13,8 @@ import {
   TrendingUp,
   Search,
   BookOpen,
-  ArrowLeft
+  ArrowLeft,
+  ExternalLink
 } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
@@ -326,32 +327,62 @@ Traditional content production is fragmented:
             </div>
           )}
 
-          {/* TAB 4: THUMBNAIL PROMPTS */}
+          {/* TAB 4: THUMBNAIL PROMPTS & VISUAL PREVIEWS */}
           {activeTab === 'thumbnails' && (
             <div className="space-y-6">
               <div className="flex items-center gap-2 mb-2">
                 <ImageIcon className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-lg font-bold text-white">AI Image Prompts for Midjourney / DALL-E 3</h3>
+                <h3 className="text-lg font-bold text-white">AI Visual Thumbnails & Image Prompts</h3>
               </div>
 
-              <div className="space-y-4">
-                {pkg?.thumbnail_prompts_json?.map((prompt: string, idx: number) => (
-                  <div key={idx} className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 relative group">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-mono text-indigo-400 font-bold">Thumbnail Visual Prompt #{idx + 1}</span>
-                      <button
-                        onClick={() => handleCopyPrompt(prompt, idx)}
-                        className="px-3 py-1 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold hover:bg-indigo-600/40 transition-colors flex items-center gap-1"
-                      >
-                        {copiedPromptIdx === idx ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiedPromptIdx === idx ? 'Copied Prompt' : 'Copy Prompt'}</span>
-                      </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {pkg?.thumbnail_prompts_json?.map((prompt: string, idx: number) => {
+                  const encodedPrompt = encodeURIComponent(prompt.split('--')[0].trim());
+                  const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&nologo=true&seed=${idx + 42}`;
+                  return (
+                    <div key={idx} className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4 flex flex-col justify-between">
+                      {/* Live Generated Image Preview */}
+                      <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-950 border border-slate-800 group shadow-lg">
+                        <img
+                          src={imageUrl}
+                          alt={`Generated Thumbnail #${idx + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                          onError={(e) => {
+                            // Fallback placeholder if image fetch takes time
+                            (e.target as HTMLImageElement).src = `https://placehold.co/1280x720/0f172a/6366f1?text=Thumbnail+Preview+${idx + 1}`;
+                          }}
+                        />
+                        <a
+                          href={imageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute top-3 right-3 px-3 py-1.5 rounded-lg bg-slate-950/80 hover:bg-slate-900 text-white text-xs font-semibold backdrop-blur border border-slate-700 transition-colors flex items-center gap-1.5 shadow"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>View Full Image</span>
+                        </a>
+                      </div>
+
+                      {/* Prompt Details & Copy Button */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-mono text-indigo-400 font-bold">Visual Prompt #{idx + 1}</span>
+                          <button
+                            onClick={() => handleCopyPrompt(prompt, idx)}
+                            className="px-3 py-1 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold hover:bg-indigo-600/40 transition-colors flex items-center gap-1"
+                          >
+                            {copiedPromptIdx === idx ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                            <span>{copiedPromptIdx === idx ? 'Copied' : 'Copy Prompt'}</span>
+                          </button>
+                        </div>
+                        <code className="block text-xs font-mono text-slate-300 bg-slate-950 p-3 rounded-xl border border-slate-800/80 leading-relaxed max-h-28 overflow-y-auto">
+                          {prompt}
+                        </code>
+                      </div>
                     </div>
-                    <code className="block text-xs font-mono text-slate-300 bg-slate-950 p-3 rounded-xl border border-slate-800/80 leading-relaxed">
-                      {prompt}
-                    </code>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
