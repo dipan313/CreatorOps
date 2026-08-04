@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any, List
 from supabase import create_client, Client
 from app.core.config import settings
 
-logger = logging.get_logger(__name__) if hasattr(logging, 'get_logger') else logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 supabase_client: Optional[Client] = None
 
