@@ -42,8 +42,9 @@ async def root():
     }
 
 @app.get("/api/health")
+@app.get("/health")
 async def health_check():
     return {"status": "healthy", "llm_model": settings.GEMINI_MODEL_REASONING}
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host=settings.HOST, port=settings.PORT, reload=True)
+    uvicorn.run("app.main:app", host=settings.HOST, port=settings.PORT, reload=True)
