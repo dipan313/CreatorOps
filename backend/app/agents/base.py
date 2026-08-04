@@ -27,7 +27,7 @@ class BaseAgent:
                 logger.info(f"Initialized Groq LLM for agent '{self.name}'.")
                 return
             except Exception as e:
-                logger.warning(f"Groq LLM init failed for agent '{self.name}': {e}")
+                logger.debug(f"Groq LLM init skipped for agent '{self.name}': {e}")
 
         # 2. OpenAI API (GPT-4o-mini / GPT-4o)
         if settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("your_"):
@@ -41,7 +41,7 @@ class BaseAgent:
                 logger.info(f"Initialized OpenAI LLM for agent '{self.name}'.")
                 return
             except Exception as e:
-                logger.warning(f"OpenAI LLM init failed for agent '{self.name}': {e}")
+                logger.debug(f"OpenAI LLM init skipped for agent '{self.name}': {e}")
 
         # 3. Google Gemini API
         if settings.GEMINI_API_KEY and not settings.GEMINI_API_KEY.startswith("your_"):
@@ -55,7 +55,7 @@ class BaseAgent:
                 logger.info(f"Initialized Gemini LLM for agent '{self.name}' with model '{self.model_name}'.")
                 return
             except Exception as e:
-                logger.warning(f"Failed to initialize LangChain Gemini for agent '{self.name}': {e}.")
+                logger.debug(f"Gemini LLM init skipped for agent '{self.name}': {e}")
 
         self._llm = None
 
