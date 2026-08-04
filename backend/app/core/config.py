@@ -12,10 +12,12 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:5173", "http://localhost:3000", "*"]
     
-    # LLM Settings (Free Tier Compatible)
+    # LLM Settings
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_MODEL_REASONING: str = "gemini-2.0-flash"
     GEMINI_MODEL_DRAFTING: str = "gemini-2.0-flash"
+    GROQ_API_KEY: Optional[str] = None
+    OPENAI_API_KEY: Optional[str] = None
     
     # Search API
     TAVILY_API_KEY: Optional[str] = None

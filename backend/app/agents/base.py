@@ -15,7 +15,36 @@ class BaseAgent:
         self._init_llm()
 
     def _init_llm(self):
-        if settings.GEMINI_API_KEY:
+        # 1. Groq API (Free Llama 3.3 70B Model)
+        if settings.GROQ_API_KEY and not settings.GROQ_API_KEY.startswith("your_"):
+            try:
+                from langchain_groq import ChatGroq
+                self._llm = ChatGroq(
+                    groq_api_key=settings.GROQ_API_KEY,
+                    model_name="llama-3.3-70b-versatile",
+                    temperature=0.7,
+                )
+                logger.info(f"Initialized Groq LLM for agent '{self.name}'.")
+                return
+            except Exception as e:
+                logger.warning(f"Groq LLM init failed for agent '{self.name}': {e}")
+
+        # 2. OpenAI API (GPT-4o-mini / GPT-4o)
+        if settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("your_"):
+            try:
+                from langchain_openai import ChatOpenAI
+                self._llm = ChatOpenAI(
+                    openai_api_key=settings.OPENAI_API_KEY,
+                    model_name="gpt-4o-mini",
+                    temperature=0.7,
+                )
+                logger.info(f"Initialized OpenAI LLM for agent '{self.name}'.")
+                return
+            except Exception as e:
+                logger.warning(f"OpenAI LLM init failed for agent '{self.name}': {e}")
+
+        # 3. Google Gemini API
+        if settings.GEMINI_API_KEY and not settings.GEMINI_API_KEY.startswith("your_"):
             try:
                 from langchain_google_genai import ChatGoogleGenerativeAI
                 self._llm = ChatGoogleGenerativeAI(
@@ -23,10 +52,12 @@ class BaseAgent:
                     model=self.model_name,
                     temperature=0.7,
                 )
-                logger.info(f"Initialized LLM for agent '{self.name}' with model '{self.model_name}'.")
+                logger.info(f"Initialized Gemini LLM for agent '{self.name}' with model '{self.model_name}'.")
+                return
             except Exception as e:
-                logger.warning(f"Failed to initialize LangChain Gemini for agent '{self.name}': {e}. Using fallback generator.")
-                self._llm = None
+                logger.warning(f"Failed to initialize LangChain Gemini for agent '{self.name}': {e}.")
+
+        self._llm = None
 
     async def run(self, input_data: Dict[str, Any], output_schema: Type[BaseModel]) -> Dict[str, Any]:
         """Runs the agent prompt with structured JSON output, falling back to mock generator if API key is missing."""
