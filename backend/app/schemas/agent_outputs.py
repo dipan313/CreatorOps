@@ -43,4 +43,6 @@ class GrowthStrategistOutput(BaseModel):
     meta_description: str = Field(description="SEO optimized meta description / video caption")
     hashtags_and_tags: List[str] = Field(description="Platform optimized tags")
     thumbnail_visual_prompts: List[str] = Field(description="AI Image generation prompts (Midjourney/DALL-E) for thumbnails")
+    post_image_prompt: Optional[str] = Field(default=None, description="Custom AI image generation prompt tailored for LinkedIn/Twitter post graphics")
+    video_storyboard_scenes: Optional[List[Dict[str, str]]] = Field(default=None, description="List of scene breakdowns with caption, visual_cue, and audio_script for video player preview")
     best_posting_times: str = Field(description="Recommended distribution strategy")

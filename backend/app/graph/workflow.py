@@ -235,6 +235,8 @@ async def node_growth_strategist(state: AgentState) -> Dict[str, Any]:
             "posting_times": output.get("best_posting_times")
         },
         "thumbnail_prompts_json": output.get("thumbnail_visual_prompts"),
+        "post_image_prompt": output.get("post_image_prompt"),
+        "video_storyboard_scenes": output.get("video_storyboard_scenes"),
         "quality_review_json": state.get("quality_review"),
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ")
     }

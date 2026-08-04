@@ -19,6 +19,8 @@ import {
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { QualityBadge } from '../components/QualityBadge';
+import { MediaPreviewPlayer } from '../components/MediaPreviewPlayer';
+import { SocialPostMockup } from '../components/SocialPostMockup';
 import { apiService } from '../services/api';
 import { GenerationDetail } from '../types';
 
@@ -202,6 +204,37 @@ Traditional content production is fragmented:
               </>
             )}
           </div>
+        </div>
+
+        {/* GENERATED MEDIA ASSETS HERO SECTION */}
+        <div className="mb-10 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-400" />
+              Generated Media Assets & Platform Preview
+            </h2>
+            <span className="text-xs font-mono text-purple-300 bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/30 font-semibold">
+              Live AI Output
+            </span>
+          </div>
+
+          {/* Render MediaPreviewPlayer for Video platforms; Render SocialPostMockup for Social platforms */}
+          {detail?.idea_prompt && (
+            <div className="grid grid-cols-1 gap-8">
+              <MediaPreviewPlayer
+                platform={detail.idea_prompt.toLowerCase().includes('reel') || detail.idea_prompt.toLowerCase().includes('tiktok') ? 'Reels' : 'YouTube'}
+                topic={detail.idea_prompt}
+                scenes={pkg?.video_storyboard_scenes}
+              />
+
+              <SocialPostMockup
+                platform={detail.idea_prompt.toLowerCase().includes('linkedin') ? 'LinkedIn' : 'Twitter / Social'}
+                topic={detail.idea_prompt}
+                scriptMarkdown={pkg?.script_markdown || ''}
+                postImagePrompt={pkg?.post_image_prompt}
+              />
+            </div>
+          )}
         </div>
 
         {/* TABS NAVIGATION */}

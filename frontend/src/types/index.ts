@@ -51,6 +51,14 @@ export interface FinalPackage {
     posting_times?: string;
   };
   thumbnail_prompts_json?: string[];
+  post_image_prompt?: string;
+  video_storyboard_scenes?: Array<{
+    scene_number: string;
+    timestamp: string;
+    caption: string;
+    visual_cue: string;
+    audio_script: string;
+  }>;
   quality_review_json?: {
     overall_score: number;
     clarity_score?: number;
