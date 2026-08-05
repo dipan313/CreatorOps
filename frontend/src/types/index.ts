@@ -35,6 +35,18 @@ export interface GenerationProgress {
   error_message?: string;
 }
 
+export interface StoryboardScene {
+  scene_number: number | string;
+  timeframe?: string;
+  timestamp?: string;
+  caption?: string;
+  visual_cue: string;
+  audio_script?: string;
+  voiceover_script?: string;
+  camera_angle?: string;
+  b_roll_suggestion?: string;
+}
+
 export interface FinalPackage {
   id: string;
   generation_id: string;
@@ -52,13 +64,7 @@ export interface FinalPackage {
   };
   thumbnail_prompts_json?: string[];
   post_image_prompt?: string;
-  video_storyboard_scenes?: Array<{
-    scene_number: string;
-    timestamp: string;
-    caption: string;
-    visual_cue: string;
-    audio_script: string;
-  }>;
+  video_storyboard_scenes?: StoryboardScene[];
   quality_review_json?: {
     overall_score: number;
     clarity_score?: number;

@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, ArrowRight, Loader2, ShieldCheck, CheckCircle2, RotateCcw, AlertCircle } from 'lucide-react';
+import { Sparkles, ArrowRight, Loader2, ShieldCheck, CheckCircle2, RotateCcw, AlertCircle, Play } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { AgentCard } from '../components/AgentCard';
 import { WorkflowVisualizer } from '../components/WorkflowVisualizer';
 import { apiService } from '../services/api';
 import { GenerationProgress } from '../types';
+import { audioEngine } from '../services/AudioEngine';
 
 export const LiveWorkspacePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [progress, setProgress] = useState<GenerationProgress | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [hasPlayedFinishSound, setHasPlayedFinishSound] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -27,11 +28,15 @@ export const LiveWorkspacePage: React.FC = () => {
 
         if (data.status === 'completed') {
           clearInterval(intervalId);
+          if (!hasPlayedFinishSound) {
+            audioEngine.playPipelineComplete();
+            setHasPlayedFinishSound(true);
+          }
         }
       } catch (err) {
         console.error('Error fetching progress', err);
         // Provide mock progress state for offline demo
-        setProgress({
+        const mockData: GenerationProgress = {
           generation_id: id,
           status: 'completed',
           current_agent: 'Finished',
@@ -53,7 +58,12 @@ export const LiveWorkspacePage: React.FC = () => {
             { agent_name: 'Quality Director', status: 'completed', output_json: { overall_score: 95, passes_quality_gate: true }, execution_time_ms: 1100, created_at: '' },
             { agent_name: 'Growth Strategist', status: 'completed', output_json: { viral_titles: ['Scale Content 5x'] }, execution_time_ms: 1300, created_at: '' },
           ]
-        });
+        };
+        setProgress(mockData);
+        if (!hasPlayedFinishSound) {
+          audioEngine.playPipelineComplete();
+          setHasPlayedFinishSound(true);
+        }
       }
     };
 
@@ -61,7 +71,7 @@ export const LiveWorkspacePage: React.FC = () => {
     intervalId = setInterval(fetchProgress, 1200);
 
     return () => clearInterval(intervalId);
-  }, [id]);
+  }, [id, hasPlayedFinishSound]);
 
   const agentsConfig = [
     { name: 'Creative Director', role: 'Gemini Pro Reasoning', icon: '🎨' },
@@ -88,13 +98,17 @@ export const LiveWorkspacePage: React.FC = () => {
 
   const isFinished = progress?.status === 'completed';
 
+  const handleInjectConstraint = (agentName: string, constraint: string) => {
+    audioEngine.playClick();
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-6 py-10 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-6 py-10 flex-1 w-full space-y-8">
         {/* HEADER STATUS BAR */}
-        <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 purple-glow">
+        <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 purple-glow">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-mono uppercase tracking-widest text-purple-400 font-bold">
@@ -107,12 +121,12 @@ export const LiveWorkspacePage: React.FC = () => {
               {isFinished ? (
                 <>
                   <CheckCircle2 className="w-7 h-7 text-emerald-400" />
-                  Package Generation Complete
+                  Multi-Agent Pipeline Executed Successfully
                 </>
               ) : (
                 <>
                   <Loader2 className="w-7 h-7 text-purple-400 animate-spin" />
-                  Executing Multi-Agent Pipeline...
+                  Executing Multi-Agent Node Pipeline...
                 </>
               )}
             </h1>
@@ -122,7 +136,7 @@ export const LiveWorkspacePage: React.FC = () => {
             {progress && (
               <div className="bg-slate-900/90 border border-slate-800 px-4 py-2 rounded-2xl flex items-center gap-3 text-sm font-semibold">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <span>Score: {progress.quality_score}/100</span>
+                <span>Quality Gate: {progress.quality_score}/100</span>
                 {progress.retry_count > 0 && (
                   <span className="text-xs text-amber-400 font-mono">({progress.retry_count} retries)</span>
                 )}
@@ -131,25 +145,29 @@ export const LiveWorkspacePage: React.FC = () => {
 
             {isFinished && (
               <button
-                onClick={() => navigate(`/results/${id}`)}
+                onClick={() => {
+                  audioEngine.playClick();
+                  navigate(`/results/${id}`);
+                }}
                 className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-extrabold shadow-lg shadow-emerald-500/20 hover:scale-105 transition-all flex items-center gap-2"
               >
-                <span>View Final Results</span>
+                <span>View Final Studio Results</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             )}
           </div>
         </div>
 
-        {/* WORKFLOW VISUALIZER */}
+        {/* WORKFLOW NODE MATRIX GRAPH */}
         <WorkflowVisualizer
           currentAgent={progress?.current_agent || 'Creative Director'}
           completedAgents={progress?.completed_agents || []}
           retryCount={progress?.retry_count || 0}
+          onInjectConstraint={handleInjectConstraint}
         />
 
         {/* LIVE AGENT CARDS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 my-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {agentsConfig.map((agent) => (
             <AgentCard
               key={agent.name}
@@ -170,15 +188,18 @@ export const LiveWorkspacePage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center py-8 glass-panel rounded-3xl border border-emerald-500/40 green-glow"
           >
-            <h3 className="text-2xl font-bold text-white mb-2">🎉 Your Publish-Ready Content Package is Ready!</h3>
+            <h3 className="text-2xl font-bold text-white mb-2">🎉 Publish-Ready Content Package Assembled!</h3>
             <p className="text-slate-400 text-sm mb-6 max-w-lg mx-auto">
               All 6 agents have finished processing and verified compliance with production quality metrics.
             </p>
             <button
-              onClick={() => navigate(`/results/${id}`)}
+              onClick={() => {
+                audioEngine.playClick();
+                navigate(`/results/${id}`);
+              }}
               className="px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-base shadow-xl shadow-emerald-500/30 hover:scale-105 transition-all inline-flex items-center gap-3"
             >
-              <span>Explore Full Package & Export</span>
+              <span>Explore Studio Package & Omnichannel Simulator</span>
               <ArrowRight className="w-5 h-5" />
             </button>
           </motion.div>
